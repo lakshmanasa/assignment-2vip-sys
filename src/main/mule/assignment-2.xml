@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway" xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="8fa7842e-c1e0-4e82-b853-ce16e7962099" >
+		<http:listener-connection host="0.0.0.0" port="8081" protocol="HTTPS">
+			<tls:context >
+				<tls:key-store type="jks" path="server-keystore.jks" keyPassword="lakshman" password="mulesoft" />
+			</tls:context>
+		</http:listener-connection>
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="36d8912d-2164-4573-97ff-ce48437388ed" />
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="fd51b7eb-89e7-4a45-8fc4-e94ba5ba46ba" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="123456" database="assignment2" />
+	</db:config>
+	<db:config name="Database_Config1" doc:name="Database Config" doc:id="cb29cf17-e324-4fa4-a3ce-58b7d91c3914" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="123456" database="studentdetails" />
+	</db:config>
+	<api-gateway:autodiscovery apiId="18380912" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="2e839b06-d011-4d1d-be90-f1e0b9f810ef" flowRef="assignment-2Flow2" />
+	<flow name="personal" doc:id="c8e4422d-122b-4ec4-a225-ae547051337e" >
+		<http:listener doc:name="Listener" doc:id="38c48c66-86d0-4e42-9b46-7478ce4dcf08" config-ref="HTTP_Listener_config" path="/per"/>
+		<file:read doc:name="Read" doc:id="1a413dc8-da61-4668-b009-4347c00db1fe" config-ref="File_Config" path="E:\ram-uk\personal.xlsx" outputMimeType="application/xlsx"/>
+		<ee:transform doc:name="Transform Message" doc:id="751c0655-3fa8-4240-934b-75d91b7d8c18" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="b1ba69db-6208-406c-8c08-a2bb87b42f58" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.Sheet1]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="assignment-2Batch_Job" doc:id="bb6b044e-40ea-4fda-be48-36254ed2d4ba">
+			<batch:process-records>
+				<batch:step name="Batch_Step" doc:id="43c53183-df10-49d2-a0a3-f42fcdf64452" acceptPolicy="ALL">
+					<db:insert doc:name="Insert" doc:id="50443e07-cc4d-4fca-80a8-7ada1c64db31" config-ref="Database_Config">
+						<db:sql><![CDATA[insert into personaldetails values(:uid,:fname,:mname,:lname,:add1,:add2,:phn)]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	uid: payload.userID,
+	fname: payload.firstName,
+	mname: payload.middleName,
+	lname: payload.lastName,
+	add1: payload.address1,
+	add2: payload.address2,
+	phn: payload.phone
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+	</flow>
+	<flow name="department" doc:id="0a9ceb22-aa24-4aad-8800-2f6944193d2a" >
+		<http:listener doc:name="Listener" doc:id="476df17a-9419-4710-873c-7aaebaf1fbba" config-ref="HTTP_Listener_config" path="/department"/>
+		<file:read doc:name="Read" doc:id="4fd9af47-d914-4a01-b719-86ed99547f6b" config-ref="File_Config" path="E:\ram-uk\depart.xlsx" outputMimeType="application/xlsx"/>
+		<ee:transform doc:name="Transform Message" doc:id="38a46826-a88d-441e-9e47-ccbc316fc374" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="c9c30e91-4b91-4b37-b157-54e852c36914" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.Sheet1]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<batch:job jobName="assignment-2Batch_Job1" doc:id="197d65c3-6a0b-4324-84c0-9212444f16e8" >
+			<batch:process-records >
+				<batch:step name="Batch_Step1" doc:id="4031197d-b109-481b-86d7-904b950d9760" acceptExpression="#[isAlphanumeric(payload.deptID)]">
+					<db:insert doc:name="Insert" doc:id="c71d58c3-1de1-420e-827f-82becbf66b5d" config-ref="Database_Config">
+						<db:sql><![CDATA[insert into departmentdetails values(:uid,:deptid,:desig,:doj,:sal,:pre)]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	uid: payload.userID,
+	deptid: payload.deptID,
+	desig: payload.designation,
+	doj: payload.dateOfJoining,
+	sal: payload.salary,
+	pre: payload.previousEmployer
+}]]]></db:input-parameters>
+					</db:insert>
+				</batch:step>
+			</batch:process-records>
+		</batch:job>
+	</flow>
+	<flow name="assignment-2Flow2" doc:id="a53b4a9e-8a77-41bc-bd83-7a9c19c6ddb5" >
+		<http:listener doc:name="Listener" doc:id="d6fa2ad1-9a61-4fd6-92db-7ae32256114d" config-ref="HTTP_Listener_config" path="/db"/>
+		<db:select doc:name="Select" doc:id="78d22f48-a84e-4f43-9276-b58ee2440a31" config-ref="Database_Config1">
+			<db:sql ><![CDATA[select * from details where USERID in (:userid1,:userid2,:userid3)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	userid1: attributes.queryParams.userid1,
+	userid2: attributes.queryParams.userid2,
+	userid3: attributes.queryParams.userid3
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="227cd1eb-142d-47a3-87fb-1c81d6127fc7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="19a613d4-1631-4eb6-896a-8e2d07eea84d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map{
+    "select": "SELECT USERID," ++ $.COLUMNNAMES ++ " FROM " ++ $.TABLENAMES ++ " WHERE USERID = '" ++ $.USERID ++ "'" 
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="80722eb3-7c32-4d9e-82c1-550ef81aa230" >
+			<db:select doc:name="Select" doc:id="2275d7cb-8dec-4e33-ac9c-26e40a21c169" config-ref="Database_Config">
+			<db:sql><![CDATA[#[payload.select]]]></db:sql>
+		</db:select>
+			<set-variable value="#[(vars.a default []) + payload]" doc:name="Set Variable" doc:id="a0bd0f68-65bf-4411-963d-ca01af27e499" variableName="a"/>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="1153d93f-4908-47a7-a64f-fe8b72fb274c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+((((flatten(vars.a)groupBy($.USERID)) mapObject(v,k,i) -> {
+    (k): v reduce($$ ++ $)
+})orderBy($.DEPTID))groupBy($.DEPTID))]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="assignment-2Flow" doc:id="88ffbcd0-1320-4d36-bf3e-1d5befd67da3" >
+		<http:listener doc:name="Listener" doc:id="583d279d-2095-408e-8ef8-cec6a002f2c4" config-ref="HTTP_Listener_config" path="/er"/>
+		<ee:transform doc:name="Transform Message" doc:id="fbbfe015-0ceb-4132-81df-2b6c338d8c19" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	(userid: attributes.queryParams.userid1) if(attributes.queryParams.userid1 != null),
+	(userid: attributes.queryParams.userid2) if(attributes.queryParams.userid2 != null),
+	(userid: attributes.queryParams.userid3) if(attributes.queryParams.userid3 != null)
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<validation:is-not-blank-string doc:name="Is not blank string" doc:id="e09c3577-64cd-4298-baa1-e23392123940" message='#["pass queryparameters"]' value="#[attributes.queryString]"/>
+		<ee:transform doc:name="Transform Message" doc:id="fbb53492-89ee-4092-8071-be2327924baa" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload pluck($)]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="edb73697-6cae-4f01-ae08-e64e8761c1cf" >
+			<try doc:name="Try" doc:id="2f51291c-f65f-41db-85dd-e2155e7cd76e" >
+				<set-variable value="#[payload]" doc:name="Set Variable" doc:id="b17490d3-da7c-417c-afe5-aac5ae34efc7" variableName="a" />
+				<db:select doc:name="Select" doc:id="784435f4-cbfc-426d-9b87-7fdf7b8ae00b" config-ref="Database_Config1">
+				<db:sql><![CDATA[select * from details where userid =:uid]]></db:sql>
+				<db:input-parameters><![CDATA[#[uid: vars.a]]]></db:input-parameters>
+			</db:select>
+				<ee:transform doc:name="Transform Message" doc:id="2887781d-f73a-4904-aec0-11ecfc733762">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+				<validation:is-not-empty-collection doc:name="Is not empty collection" doc:id="badbaab1-d6b7-4c32-ab09-f654494af49a" message='#["there is no record on this " ++ vars.a ++ " userid"]' />
+				<ee:transform doc:name="Transform Message" doc:id="454fa6a9-9037-423b-b41f-2199cdc8ce87">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map{
+    "select": "SELECT USERID," ++ $.COLUMNNAMES ++ " FROM " ++ $.TABLENAMES ++ " WHERE USERID = '" ++ $.USERID ++ "'" 
+}
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+				<foreach doc:name="For Each" doc:id="c81b1d74-389e-4225-a3b8-e714db8e8c06">
+				<db:select doc:name="Select" doc:id="564d9b1a-ac05-4f69-8e49-a42a39ba0e00" config-ref="Database_Config">
+					<db:sql><![CDATA[#[payload.select]]]></db:sql>
+				</db:select>
+				<set-variable value="#[(vars.b default []) + payload]" doc:name="Set Variable" doc:id="59895d36-8ddb-4da0-b487-2156055d072d" variableName="b" />
+			</foreach>
+				<set-variable value="#[vars.b]" doc:name="Set Variable" doc:id="08c7b838-a018-4cb1-914e-1d06d054678e" variableName="c" />
+				<ee:transform doc:name="Transform Message" doc:id="6cdeb7be-ca48-4450-a201-d4958c862924">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+vars.c]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+				<logger level="INFO" doc:name="Logger" doc:id="bb1b492b-1f6e-4d90-97d0-184c92e4e47b" message="#[payload]" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="445cd91c-d812-41a8-ba1b-830fa5e1b826" >
+						<set-payload value='#["there is no record " ++ vars.a as String]' doc:name="Set Payload" doc:id="b568b976-193e-4561-9a07-f79512ef47c4" />
+						<set-variable value="#[(vars.fail default []) + payload]" doc:name="Set Variable" doc:id="1b953c96-15d6-4136-bc81-6ba2effa3cab" variableName="fail"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+		<ee:transform doc:name="Transform Message" doc:id="cd503c3b-f30d-4a53-acba-5a5f20341a2b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{"success":
+((((flatten(vars.b)groupBy($.USERID)) mapObject(v,k,i) -> {
+    (k): v reduce($$ ++ $)
+})orderBy($.DEPTID))groupBy($.DEPTID)),
+"fail": vars.fail}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="c7a1f89a-bb49-4498-9735-5ae3758b0ccf" type="VALIDATION:EMPTY_COLLECTION">
+				<set-payload value='#["lakshman"]' doc:name="Set Payload" doc:id="2b9032a5-a520-439b-975f-a1f3869def66" />
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7fb31973-4e2d-4bac-aaaf-6cbb49990bf7" type="VALIDATION:BLANK_STRING">
+				<set-payload value='#["ram"]' doc:name="Set Payload" doc:id="ee6dc8c9-dc97-4a28-bfe8-e204727e8d42" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+</mule>
